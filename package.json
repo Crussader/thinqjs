@@ -1,0 +1,22 @@
+{
+  "name": "thinqjs",
+  "version": "0.0.1",
+  "description": "Implementation of ThinQ Python Library in Javascript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Crussader/thinqjs.git"
+  },
+  "author": "Crussader",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/Crussader/thinqjs/issues"
+  },
+  "homepage": "https://github.com/Crussader/thinqjs#readme",
+  "dependencies": {
+    "npm": "^11.1.0"
+  }
+}
