@@ -72,4 +72,5 @@ export const ThinQAPIErrorCodes = {
     COMMAND_NOT_SUPPORTED_IN_MODE: "2305",
 };
 
-export const country = "IN";
+export const countryCode = "IN";
+export const regionCode = "KIC";
