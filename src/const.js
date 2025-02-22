@@ -71,3 +71,5 @@ export const ThinQAPIErrorCodes = {
     COMMAND_NOT_SUPPORTED_IN_POWER_OFF: "2304",
     COMMAND_NOT_SUPPORTED_IN_MODE: "2305",
 };
+
+export const country = "IN";
