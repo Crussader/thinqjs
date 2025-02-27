@@ -1,6 +1,6 @@
-const axios = require('axios');
-const constants = require('./const');
-const { v4: uuidv4 } = require('uuid');
+import axios from 'axios';
+import constants from './const';
+import { v4 as uuidv4 } from 'uuid';
 
 const methods = {
     GET: 'GET',
@@ -82,84 +82,84 @@ class ThinQAPI {
   }
 
   async getDeviceList(timeout=15) {
-	return await this._fetch(methods.GET, 'devices', data={timeout: timeout});
+	  return await this._fetch(methods.GET, 'devices', data={timeout: timeout});
   }
 
   async getDeviceProfile(deviceId, timeout=15) {
-	return await this._fetch(methods.GET, `devices/${deviceId}/profile`, data={timeout: timeout});
+	  return await this._fetch(methods.GET, `devices/${deviceId}/profile`, data={timeout: timeout});
   }
 
   async getDeviceStatus(deviceId, timeout=15) {
-	return await this._fetch(methods.GET, `devices/${deviceId}/status`, data={timeout: timeout});
+	  return await this._fetch(methods.GET, `devices/${deviceId}/status`, data={timeout: timeout});
   }
 
   async postDeviceControl(deviceId, payload, timeout=15) {
-	const headers = {"x-conditional-control": "true"};
+	  const headers = {"x-conditional-control": "true"};
 
-	return await this._fetch(methods.POST, `devices/${deviceId}/control`, headers, data={json: payload, timeout: timeout});
+	  return await this._fetch(methods.POST, `devices/${deviceId}/control`, headers, data={json: payload, timeout: timeout});
   }
 
   async postClientRegister(payload, timeout=15) {
-	return await this._fetch(methods.POST, 'client', data={json: payload, timeout: timeout});
+	  return await this._fetch(methods.POST, 'client', data={json: payload, timeout: timeout});
   }
 
   async deleteClientRegister(payload, timeout=15) {
-	return await this._fetch(methods.DELETE, 'client', data={json: payload, timeout: timeout});
+	  return await this._fetch(methods.DELETE, 'client', data={json: payload, timeout: timeout});
   }
 
   async postClientCertificate(payload, timeout=15) {
-	return await this._fetch(methods.POST, 'client/certificate', data={json: payload, timeout: timeout});
+	  return await this._fetch(methods.POST, 'client/certificate', data={json: payload, timeout: timeout});
   }
 
   async getPushList(timeout=15) {
-	return await this._fetch(methods.GET, 'push', data={timeout: timeout});
+	  return await this._fetch(methods.GET, 'push', data={timeout: timeout});
   }
 
   async postPushSubscribe(deviceId, timeout=15) {
-	return await this._fetch(methods.POST, `push/${deviceId}/subscribe`, data={timeout: timeout});
+	  return await this._fetch(methods.POST, `push/${deviceId}/subscribe`, data={timeout: timeout});
   }
 
   async deletePushSubscribe(deviceId, timeout=15) {
-	return await this._fetch(methods.DELETE, `push/${deviceId}/subscribe`, data={timeout: timeout});
+	  return await this._fetch(methods.DELETE, `push/${deviceId}/subscribe`, data={timeout: timeout});
   }
 
   async getEventList(timeout=15) {
-	return await this._fetch(methods.GET, 'event', data={timeout: timeout});
+	  return await this._fetch(methods.GET, 'event', data={timeout: timeout});
   }
 
   async postEventSubscribe(deviceId, timeout=15) {
-	return await this._fetch(
-		methods.POST, 
-		`event/${deviceId}/subscribe`, 
-		data={
-			timeout: timeout, 
-			json: {
-				expire: {
-					unit: "HOUR",
-					timer: 4464
-				}
-			}
-		}
-	);
+    return await this._fetch(
+      methods.POST, 
+      `event/${deviceId}/subscribe`, 
+      data={
+        timeout: timeout, 
+        json: {
+          expire: {
+            unit: "HOUR",
+            timer: 4464
+          }
+        }
+      }
+	  );
   }
 
   async deleteEventSubscribe(deviceId, timeout=15) {
-	return await this._fetch(methods.DELETE, `event/${deviceId}/unsubscribe`, data={timeout: timeout});
+	  return await this._fetch(methods.DELETE, `event/${deviceId}/unsubscribe`, data={timeout: timeout});
   }
 
   async getPushDeviceList(timeout=15) {
-	return await this._fetch(methods.GET, 'push/devices', data={timeout: timeout});
+	  return await this._fetch(methods.GET, 'push/devices', data={timeout: timeout});
   }
 
   async postPushDevicesSubscribe(timeout=15) {
-	return await this._fetch(methods.POST, `push/devices`, data={timeout: timeout});
+	  return await this._fetch(methods.POST, `push/devices`, data={timeout: timeout});
   }
 
   async deletePushDevicesSubscribe(timeout=15) {
-	return await this._fetch(methods.DELETE, `push/devices`, data={timeout: timeout});
+	  return await this._fetch(methods.DELETE, `push/devices`, data={timeout: timeout});
   }
 
   async getRoute(timeout=15) {
-	return await this._fetch(methods.GET, 'route', data={timeout: timeout});
+	  return await this._fetch(methods.GET, 'route', data={timeout: timeout});
   }
 }
