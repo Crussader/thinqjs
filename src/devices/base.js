@@ -49,13 +49,9 @@ class ConnectDeviceProfile {
 
     static _safeGet(data, ...keys) {
         for (const key of keys) {
-            try {
-                data = data[key];
-            } catch (e) {
-                if (e instanceof TypeError || e instanceof KeyError) {
-                    return null;
-                }
-                throw e;
+            data = data[key];
+            if (!data) {
+                return null;
             }
         }
         return data;
@@ -373,3 +369,186 @@ class ConnectSubDeviceProfile extends ConnectDeviceProfile {
     }
 }
 
+class ConnectBaseDevice extends BaseDevice {
+    static _CUSTOM_SET_PROPERTY_NAME = {};
+
+    constructor(
+        thinqApi,
+        deviceId,
+        deviceType,
+        modelName,
+        alias,
+        reportable,
+        profiles
+    ) {
+        super(
+            thinqApi,
+            deviceId,
+            deviceType,
+            modelName,
+            alias,
+            reportable
+        );
+        this._profiles = profiles;
+        this._subDevices = {};
+    }
+    
+    get profiles() {
+        return this._profiles;
+    }
+
+    getPropertyKey(resource, originKey) {
+        const resourceProfile = this.profiles.getProfile()[resource] || {};
+        const propKey = resourceProfile[originKey];
+        return propKey ? String(propKey) : null;
+    }
+
+    __returnExistFunName(fnName) {
+        return typeof this[fnName] === 'function' ? fnName : null;
+    }
+
+    getPropertySetFn(propertyName) {
+        let fnName = null;
+        if (!Object.keys(ConnectBaseDevice._CUSTOM_SET_PROPERTY_NAME).includes(propertyName)) {
+            fnName = this.__returnExistFunName(`set_${propertyName}`);
+        } else {
+            fnName = this.__returnExistFunName(`set_${ConnectBaseDevice._CUSTOM_SET_PROPERTY_NAME[propertyName]}`);
+        }
+        return fnName;
+    }
+
+    getSubDevice(locationName) {
+        return this._profiles.locations.includes(locationName) ? this._subDevices[locationName] : null;
+    }
+
+    __setPropertyStatus(resourceStatus, resource, propKey, propAttr, isUpdated = false) {
+        if (propAttr === "locationName") {
+            return;
+        }
+
+        let value = null;
+        if (resourceStatus !== null) {
+            if (this._profiles._CUSTOM_RESOURCES.includes(resource)) {
+                if (this._setCustomResources(propKey, propAttr, resourceStatus, isUpdated)) {
+                    return;
+                }
+            }
+            if (typeof resourceStatus === 'object' && resourceStatus !== null) {
+                value = resourceStatus[propKey];
+            }
+            if (isUpdated) {
+                if (propKey in resourceStatus) {
+                    this._setStatusAttr(propAttr, value);
+                }
+                return;
+            }
+        }
+
+        this._setStatusAttr(propAttr, value);
+    }
+
+    _setStatusAttr(propertyName, value) {
+        this[propertyName] = value;
+    }
+
+    __setErrorStatus(status) {
+        if (this._profiles.error) {
+            this._setStatusAttr("error", status["error"]);
+        }
+    }
+
+    __setStatus(status) {
+        for (const [resource, props] of Object.entries(this._profiles.getProfile())) {
+            const resourceStatus = status[resource];
+            for (const [propKey, propAttr] of Object.entries(props)) {
+                this.__setPropertyStatus(resourceStatus, resource, propKey, propAttr);
+            }
+        }
+    }
+
+    __updateStatus(status) {
+        const deviceProfile = this._profiles.getProfile();
+        for (const [resource, resourceStatus] of Object.entries(status)) {
+            if (!(resource in deviceProfile)) {
+                continue;
+            }
+            for (const [propKey, propAttr] of Object.entries(deviceProfile[resource])) {
+                this.__setPropertyStatus(resourceStatus, resource, propKey, propAttr, true);
+            }
+        }
+    }
+
+    _setStatus(status, isUpdated = false) {
+        if (typeof status !== 'object' || status === null) {
+            return;
+        }
+        this.__setErrorStatus(status);
+        if (isUpdated) {
+            this.__updateStatus(status);
+        } else {
+            this.__setStatus(status);
+        }
+    }
+
+    getStatus(propertyName) {
+        return (
+            this.hasOwnProperty(propertyName) && (propertyName === "error" || this.profiles.checkAttributeReadable(propertyName))
+                ? this[propertyName]
+                : null
+        );
+    }
+
+    setStatus(status) {
+        this._setStatus(status);
+    }
+
+    updateStatus(status) {
+        this._setStatus(status, true);
+    }
+
+    async _doAttributeCommand(payload) {
+        return await this.thinqApi.asyncPostDeviceControl(this.deviceId, payload);
+    }
+
+    async doAttributeCommand(attribute, value) {
+        return await this._doAttributeCommand(this.profiles.getAttributePayload(attribute, value));
+    }
+
+    async doMultiAttributeCommand(attributes) {
+        const payload = {};
+        for (const [attr, value] of Object.entries(attributes)) {
+            const attributePayload = this.profiles.getAttributePayload(attr, value);
+            for (const key in attributePayload) {
+                if (payload[key]) {
+                    Object.assign(payload[key], attributePayload[key]);
+                } else {
+                    payload[key] = attributePayload[key];
+                }
+            }
+        }
+        return await this._doAttributeCommand(payload);
+    }
+
+    async doRangeAttributeCommand(attribute, value) {
+        return await this._doAttributeCommand(this.profiles.getRangeAttributePayload(attribute, value));
+    }
+
+    async doMultiRangeAttributeCommand(attributes) {
+        const payload = {};
+        for (const [attr, value] of Object.entries(attributes)) {
+            const attributePayload = this.profiles.getRangeAttributePayload(attr, value);
+            for (const key in attributePayload) {
+                if (payload[key]) {
+                    Object.assign(payload[key], attributePayload[key]);
+                } else {
+                    payload[key] = attributePayload[key];
+                }
+            }
+        }
+        return await this._doAttributeCommand(payload);
+    }
+
+    async doEnumAttributeCommand(attribute, value) {
+        return await this._doAttributeCommand(this.profiles.getEnumAttributePayload(attribute, value));
+    }
+}
