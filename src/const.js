@@ -350,7 +350,7 @@ export const Property = {
     YEAST_INFO: 'yeast_info',
 };
 
-export const Location = {
+export const DeviceLocation = {
     CENTER: 'center',
     CENTER_FRONT: 'center_front',
     CENTER_REAR: 'center_rear',
