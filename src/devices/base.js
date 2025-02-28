@@ -349,3 +349,27 @@ class ConnectDeviceProfile {
         return this._getAttributePayload(attribute, value);
     }
 }
+
+class ConnectSubDeviceProfile extends ConnectDeviceProfile {
+    constructor(
+        profile,
+        locationName,
+        resourceMap = {},
+        profileMap = {},
+        customResources = [],
+        useSubNotification = false
+    ) {
+        super(
+            profile,
+            resourceMap,
+            profileMap,
+            {},
+            customResources,
+            false,
+            false,
+            useSubNotification
+        );
+        this._locationName = locationName;
+    }
+}
+
