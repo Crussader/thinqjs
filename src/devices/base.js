@@ -552,3 +552,115 @@ class ConnectBaseDevice extends BaseDevice {
         return await this._doAttributeCommand(this.profiles.getEnumAttributePayload(attribute, value));
     }
 }
+
+class ConnectMainDevice extends ConnectBaseDevice {
+    constructor(
+        thinqApi,
+        deviceId,
+        deviceType,
+        modelName,
+        alias,
+        reportable,
+        profiles,
+        subDeviceType
+    ) {
+        super(
+            thinqApi,
+            deviceId,
+            deviceType,
+            modelName,
+            alias,
+            reportable,
+            profiles
+        );
+        this._subDevices = {};
+        for (const locationName of this._profiles.locations) {
+            const _subDevice = new subDeviceType(
+                thinqApi,
+                deviceId,
+                deviceType,
+                modelName,
+                alias,
+                reportable,
+                this._profiles.getSubProfile(locationName),
+                this._profiles.getLocationKey(locationName)
+            );
+            this._setSubDevice(locationName, _subDevice);
+            this._subDevices[locationName] = _subDevice;
+        }
+    }
+
+    _setSubDevice(locationName, subDevice) {
+        this[locationName] = subDevice;
+    }
+
+    setStatus(status) {
+        super.setStatus(status);
+        for (const subDevice of Object.values(this._subDevices)) {
+            subDevice.setStatus(status);
+        }
+    }
+
+    updateStatus(status) {
+        super.updateStatus(status);
+        for (const subDevice of Object.values(this._subDevices)) {
+            subDevice.updateStatus(status);
+        }
+    }
+}
+
+class ConnectSubDevice extends ConnectBaseDevice {
+    constructor(
+        profiles,
+        locationName,
+        thinqApi,
+        deviceId,
+        deviceType,
+        modelName,
+        alias,
+        reportable,
+        isSingleResource = false
+    ) {
+        super(thinqApi, deviceId, deviceType, modelName, alias, reportable, profiles);
+        this._locationName = locationName;
+        this._isSingleResource = isSingleResource;
+    }
+
+    get locationName() {
+        return this._locationName;
+    }
+
+    _getLocationNameFromStatus(locationStatus) {
+        if (this._isSingleResource) {
+            return locationStatus?.locationName || null;
+        } else {
+            return locationStatus?.location?.locationName || null;
+        }
+    }
+
+    _isCurrentLocationStatus(locationStatus) {
+        return this._getLocationNameFromStatus(locationStatus) === this._locationName;
+    }
+
+    _setStatus(status, isUpdated = false) {
+        if (Array.isArray(status)) {
+            for (const locationStatus of status) {
+                if (!this._isCurrentLocationStatus(locationStatus)) {
+                    continue;
+                }
+                super._setStatus(locationStatus, isUpdated);
+                return;
+            }
+            return;
+        }
+        for (const resource of this._profiles._CUSTOM_RESOURCES) {
+            for (const locationStatus of status?.[resource] || []) {
+                if (!this._isCurrentLocationStatus(locationStatus)) {
+                    continue;
+                }
+                super._setStatus({ [resource]: locationStatus }, isUpdated);
+                return;
+            }
+        }
+    }
+}
