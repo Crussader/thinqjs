@@ -1,4 +1,9 @@
+/**
+ * @fileOverview This file contains the ThinQAPI class for interacting with the LG ThinQ API.
+ * It provides methods for device management, control, and event handling.
+ */
 import axios from 'axios';
+
 import constants from './const';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,7 +16,18 @@ const methods = {
 
 class ThinQAPIError extends Error {}
 
-class ThinQAPI {
+/**
+ * @class ThinQAPI
+ * @classdesc Represents the ThinQ API for interacting with LG devices.
+ */
+export class ThinQAPI {
+  /**
+   * 
+   * @param {string} accessToken 
+   * @param {string} countryCode 
+   * @param {string} clientID 
+   * @param {boolean} mockResponse 
+   */
   constructor(accessToken, countryCode, clientID, mockResponse = false) {
     this.accessToken = accessToken;
     this.countryCode = countryCode;
