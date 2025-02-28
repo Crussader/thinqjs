@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/Crussader/thinqjs#readme",
   "dependencies": {
+    "aws-crt": "^1.25.3",
     "axios": "^1.7.9",
     "npm": "^11.1.0"
   }

@@ -74,3 +74,15 @@ export const ThinQAPIErrorCodes = {
 
 export const countryCode = "IN";
 export const regionCode = "KIC";
+
+
+// Constants for the MQTT Client
+export const FILE_ROOT_CA = "AmazonRootCA1.pem"
+export const ROOT_CA_REPOSITORY = "https://www.amazontrust.com/repository"
+export const PRIVATE_KEY_SIZE = 2048
+export const CLIENT_BODY = {
+    "type": "MQTT",
+    "service-code": "SVC202",
+    "device-type": "607",
+    "allowExist": true
+}
