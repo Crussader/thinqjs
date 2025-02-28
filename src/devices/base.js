@@ -6,16 +6,15 @@ import {
     Resource 
 } from '../const';
 import { BaseDevice } from '../device';
-import { ThinQApi } from '../thinq_api';
 
-const TYPE = "type";
-const UNIT = "unit";
-const READABILITY = "readable";
-const WRITABILITY = "writable";
-const READABLE_VALUES = "read_values";
-const WRITABLE_VALUES = "write_values";
+export const TYPE = "type";
+export const UNIT = "unit";
+export const READABILITY = "readable";
+export const WRITABILITY = "writable";
+export const READABLE_VALUES = "read_values";
+export const WRITABLE_VALUES = "write_values";
 
-class ConnectDeviceProfile {
+export class ConnectDeviceProfile {
     constructor(
         profile,
         resourceMap = {},
@@ -369,7 +368,7 @@ class ConnectSubDeviceProfile extends ConnectDeviceProfile {
     }
 }
 
-class ConnectBaseDevice extends BaseDevice {
+export class ConnectBaseDevice extends BaseDevice {
     static _CUSTOM_SET_PROPERTY_NAME = {};
 
     constructor(
