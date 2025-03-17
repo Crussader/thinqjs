@@ -1,5 +1,5 @@
-export const API_KEY = '';
-export const CLIENT_PREFIX = '';
+export const API_KEY = "v6GFvkweNo7DK7yD3ylIZ9w52aKBU0eJ7wLXkSR3";
+export const CLIENT_PREFIX = "thinq-open";
 
 export const deviceType = {
     AIR_CONDITIONER: 'DEVICE_AIR_CONDITIONER',
@@ -85,7 +85,8 @@ export const CLIENT_BODY = {
     "service-code": "SVC202",
     "device-type": "607",
     "allowExist": true
-}
+};
+
 export const Resource = {
     AIR_CON_JOB_MODE: 'air_con_job_mode',
     AIR_FAN_JOB_MODE: 'air_fan_job_mode',
