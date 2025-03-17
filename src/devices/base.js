@@ -1,11 +1,9 @@
 import { 
     PROPERTY_READABLE, 
     PROPERTY_WRITABLE, 
-    DeviceLocation as Location, 
-    Property, 
-    Resource 
 } from '../const';
-import { BaseDevice } from '../device';
+import { ThinQAPI } from '../api.js';
+import { BaseDevice } from '../device.js';
 
 export const TYPE = "type";
 export const UNIT = "unit";
@@ -15,6 +13,19 @@ export const READABLE_VALUES = "read_values";
 export const WRITABLE_VALUES = "write_values";
 
 export class ConnectDeviceProfile {
+
+    /**
+     * Constructs a new instance of the device base class.
+     * 
+     * @param {Object} profile - The profile object containing device information.
+     * @param {Object} [resourceMap={}] - A map of resources associated with the device.
+     * @param {Object} [profileMap={}] - A map of profiles associated with the device.
+     * @param {Object} [locationMap={}] - A map of locations associated with the device.
+     * @param {Array} [customResources=[]] - An array of custom resources for the device.
+     * @param {boolean} [useExtensionProperty=false] - Flag to determine if extension properties should be used.
+     * @param {boolean} [useSubProfileOnly=false] - Flag to determine if only sub-profiles should be used.
+     * @param {boolean} [useNotification=true] - Flag to determine if notifications should be generated.
+     */
     constructor(
         profile,
         resourceMap = {},
@@ -371,6 +382,17 @@ class ConnectSubDeviceProfile extends ConnectDeviceProfile {
 export class ConnectBaseDevice extends BaseDevice {
     static _CUSTOM_SET_PROPERTY_NAME = {};
 
+    /**
+     * Constructs a new device instance.
+     * 
+     * @param {ThinQAPI} thinqApi - The API instance for ThinQ.
+     * @param {string} deviceId - The unique identifier for the device.
+     * @param {string} deviceType - The type of the device.
+     * @param {string} modelName - The model name of the device.
+     * @param {string} alias - The alias name of the device.
+     * @param {boolean} reportable - Indicates if the device is reportable.
+     * @param {Object} profiles - The profiles associated with the device.
+     */
     constructor(
         thinqApi,
         deviceId,

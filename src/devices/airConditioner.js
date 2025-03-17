@@ -1,6 +1,6 @@
-import { ThinQApi } from '../api';
-import { WRITABILITY, READABILITY, ConnectBaseDevice, ConnectDeviceProfile } from './base';
-import { Property, Resource } from '../const';
+import { ThinQApi } from '../api.js';
+import { WRITABILITY, READABILITY, ConnectBaseDevice, ConnectDeviceProfile } from './base.js';
+import { Property, Resource } from '../const.js';
 
 class AirConditionerProfile extends ConnectDeviceProfile {
     constructor(profile) {
@@ -174,6 +174,17 @@ class AirConditionerProfile extends ConnectDeviceProfile {
 }
 
 class AirConditionerDevice extends ConnectBaseDevice {
+    /**
+     * Constructs an instance of the AirConditioner class.
+     * 
+     * @param {ThinQApi} thinq_api - The ThinQ API instance.
+     * @param {string} device_id - The unique identifier for the device.
+     * @param {string} device_type - The type of the device.
+     * @param {string} model_name - The model name of the device.
+     * @param {string} alias - The alias name for the device.
+     * @param {boolean} reportable - Indicates if the device is reportable.
+     * @param {ConnectDeviceProfile} profile - The profile configuration for the air conditioner.
+     */
     constructor(thinq_api, device_id, device_type, model_name, alias, reportable, profile) {
         super({
             thinq_api: thinq_api,
