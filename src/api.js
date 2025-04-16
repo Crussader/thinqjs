@@ -41,6 +41,7 @@ export class ThinQAPI {
         this.API_KEY = CONST_API_KEY;
         this.countryCode = countryCode ? countryCode : CONST_COUNTRY_CODE;
         this.regionCode = CONST_REGION_CODE;
+        this._phase = "OP";
 
     }
 
@@ -55,7 +56,7 @@ export class ThinQAPI {
             "x-message-id": this._generateMessageId(),
             "x-client-id": this.clientID,
             "x-api-key": this.API_KEY,
-            "x-service-phase": this.phase,
+            "x-service-phase": this._phase,
             ...headers,
         };
     }

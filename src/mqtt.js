@@ -4,10 +4,12 @@ Bascially deals with querying the statues of the devices and controlling them.
 */
 
 import axios from 'axios';
-import { TextEncoder, TextDecoder } from 'node:util';
-import { CLIENT_BODY, FILE_ROOT_CA, ROOT_CA_REPOSITORY, PRIVATE_KEY_SIZE } from "./const";
+import { TextEncoder } from 'node:util';
+import { CLIENT_BODY, FILE_ROOT_CA, ROOT_CA_REPOSITORY, PRIVATE_KEY_SIZE } from "./const.js";
+import { ThinQAPI } from "./api.js";
 import { mqtt, io } from "aws-crt";
-import crypto from 'node:crypto';
+// import crypto from 'node:crypto';
+import forge from 'node-forge';
 
 
 const connectionState = {
@@ -15,7 +17,19 @@ const connectionState = {
     DISCONNECTED: 'client_disconnected',
 }
 
-class MQTTClient {
+
+export class MQTTClient {
+    /**
+     * Creates an instance of the MQTT connection handler.
+     * 
+     * @param {ThinQAPI} thinqAPI - The ThinQ API instance.
+     * @param {string} clientId - The client ID for the MQTT connection.
+     * @param {function} onMessageArrived - Callback function to handle incoming messages.
+     * @param {function} onConnectionInterrupted - Callback function to handle connection interruptions.
+     * @param {function} onConnectionSuccess - Callback function to handle successful connections.
+     * @param {function} onConnectionFailure - Callback function to handle connection failures.
+     * @param {function} onConnectionClosed - Callback function to handle connection closures.
+     */
     constructor(
         thinqAPI,
         clientId,
@@ -54,15 +68,16 @@ class MQTTClient {
     async _getRootCertificate(timeout=15) {
         const url = `${ROOT_CA_REPOSITORY}/${FILE_ROOT_CA}`;
 
-        console.debug(`Root Certificate url: ${url}`);
+        console.info(`Root Certificate url: ${url}`);
 
         const response = await axios({
             method: 'GET',
             url: url,
-            timeout: timeout
+            timeout: timeout * 1000
         });
 
         if (response.status != 200) {
+            console.error(`Failed to fetch Root Certificate: ${response.statusText}`);
             return null;
         }
 
@@ -70,50 +85,46 @@ class MQTTClient {
     }
 
     async _generateCSR() {
-        const textEncoder = new TextEncoder();
-        const textDecoder = new TextDecoder();
-
-        const response = await this._getRootCertificate();
-        
-        if (response === null) {
-            console.error("Failed to get the Root Certificate");
+        // Step 1: Retrieve the root certificate
+        const certData = await this._getRootCertificate();
+        if (!certData) {
+            console.error('Root certificate download failed');
             return false;
         }
-
-        this._bytesRootCA = textEncoder.encode(response);
-
-        const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
-            modulusLength: PRIVATE_KEY_SIZE,
-            publicKeyEncoding: {
-                type: 'spki',
-                format: 'pem'
-            },
-            privateKeyEncoding: {
-                type: 'pkcs8',
-                format: 'pem'
+        const bytesRootCA = Buffer.from(certData, 'utf8');
+    
+        // Step 2: Generate RSA key pair
+        const keyPair = forge.pki.rsa.generateKeyPair(2048);
+        const privateKeyPem = forge.pki.privateKeyToPem(keyPair.privateKey);
+        const bytesPrivateKey = Buffer.from(privateKeyPem, 'utf8');
+    
+        // Step 3: Create CSR
+        const csr = forge.pki.createCertificationRequest();
+        csr.publicKey = keyPair.publicKey;
+        csr.setSubject([
+            {
+                name: 'commonName',
+                value: 'lg_thinq'
             }
-        });
-
-        this._bytesPrivateKey = textEncoder.encode(privateKey);
-
-        // not sure about this snippet
-        const csr = crypto.createSign("sha512")
-        csr.update("CN=lg_thinq");
-        csr.update(publicKey); 
-        csr.end();
-
-        const signature = csr.sign(privateKey).toString();
-        // Till here
-        
-        const matches = signature.match(/-----BEGIN CERTIFICATE REQUEST-----\s+([\s\S]+?)\s+-----END CERTIFICATE REQUEST-----/);
-        if (!matches) {
-            console.error("Failed to parse CSR PEM");
+        ]);
+        csr.sign(keyPair.privateKey, forge.md.sha512.create());
+    
+        // Step 4: Convert CSR to PEM format
+        const csrPem = forge.pki.certificationRequestToPem(csr);
+    
+        // Step 5: Extract base64-encoded CSR content
+        const csrMatch = csrPem.match(/-----BEGIN CERTIFICATE REQUEST-----([\s\S]+?)-----END CERTIFICATE REQUEST-----/);
+        if (!csrMatch) {
+            console.error('Failed to extract CSR content');
             return false;
         }
-        const csrStr = matches[1].replace(/\n/g, '').trim();
-
-        this._clientCSR = csrStr;
-
+        const csrStr = csrMatch[1].replace(/\r?\n|\r/g, '').trim();
+    
+        // Output the results
+        console.info('Root CA Bytes:', bytesRootCA);
+        console.info('Private Key Bytes:', bytesPrivateKey);
+        console.info('CSR String:', csrStr);
+    
         return true;
     }
 
@@ -130,7 +141,7 @@ class MQTTClient {
 
         console.info(`Request client body: ${payload}`)
 
-        const response = await this._thinqAPI.postClientCertificate(payload);
+        const response = await this.thinqAPI.postClientCertificate(payload);
         if (!response) {
             console.error("Failed to issue certificate");
             return false;
@@ -152,20 +163,20 @@ class MQTTClient {
     }
 
     async _onDisconnect() {
-        const result = await this._thinqAPI.deleteClientRegister(payload=CLIENT_BODY);
+        const result = await this.thinqAPI.deleteClientRegister(CLIENT_BODY);
         console.info("Deleted Client Register: %s",  result);
         self._state = connectionState.DISCONNECTED;
     }
 
     async init() {
-        const routeResponse = await this._thinqAPI.getRoute();
+        const routeResponse = await this.thinqAPI.getRoute();
 
         // Need to clean the string
         this._MQTTServer = routeResponse.mqttServer.replace("mqtts://", "").split(":")[0];
     }
 
     async prepareMQTT() {
-        await this._thinqAPI.postClientRegister(payload=CLIENT_BODY);
+        await this.thinqAPI.postClientRegister(CLIENT_BODY);
 
         if (!await this._generateCSR()) {
             return false;
