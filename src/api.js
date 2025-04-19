@@ -2,13 +2,14 @@
  * @fileOverview This file contains the ThinQAPI class for interacting with the LG ThinQ API.
  * It provides methods for device management, control, and event handling.
  */
-import axios from 'axios';
+import { Axios } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
 import { 
   API_KEY as CONST_API_KEY, 
   countryCode as CONST_COUNTRY_CODE, 
-  regionCode as CONST_REGION_CODE 
+  regionCode as CONST_REGION_CODE,
+  ThinQAPIErrorCodes
 } from './const.js';
 
 const methods = {
@@ -18,7 +19,15 @@ const methods = {
     DELETE: 'DELETE',
 };
 
-class ThinQAPIError extends Error {}
+class ThinQAPIError extends Error {
+    constructor(code, message, headers) {
+        super(message);
+        this.code = code;
+        this.message = message;
+        this.headers = headers;
+        this.error_name = ThinQAPIErrorCodes[code] || "UNKNOWN_ERROR";
+    }
+}
 
 /**
  * @class ThinQAPI
@@ -27,12 +36,14 @@ class ThinQAPIError extends Error {}
 export class ThinQAPI {
     /**
      * 
-     * @param {string} accessToken 
-     * @param {string} countryCode 
-     * @param {string} clientID 
-     * @param {boolean} mockResponse 
+     * @param {Axios} instance - The Axios instance for making HTTP requests.
+     * @param {string} accessToken - The access token for authentication. ThinqPAT.
+     * @param {string} countryCode - The country code for the API requests.
+     * @param {string} clientID - The client ID for the API requests. UUID V4.
+     * @param {boolean} mockResponse - Flag to indicate if mock responses should be used.
      */
-    constructor(accessToken, countryCode, clientID, mockResponse = false) {
+    constructor(instance, accessToken, countryCode, clientID, mockResponse = false) {
+        this.instance = instance;
         this.accessToken = accessToken;
         this.countryCode = countryCode;
         this.clientID = clientID;
@@ -50,6 +61,8 @@ export class ThinQAPI {
     }
 
     _generateHeaders(headers = {}) {
+
+
         return {
             "Authorization": `Bearer ${this.accessToken}`,
             "x-country": this.countryCode,
@@ -57,6 +70,7 @@ export class ThinQAPI {
             "x-client-id": this.clientID,
             "x-api-key": this.API_KEY,
             "x-service-phase": this._phase,
+            "Content-Type": "application/json",
             ...headers,
         };
     }
@@ -64,54 +78,52 @@ export class ThinQAPI {
     _generateMessageId() {
         // Used GPT to generate this function, not sure if it is correct
         const uuidValue = uuidv4();
-        const hexUuid = uuidValue.replace(/-/g, '');
-        const uuidBytes = Buffer.from(hexUuid, 'hex');
-        const base64Str = uuidBytes.toString('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_');
-        return base64Str.slice(0, -2);
+        const uuidBytes = Buffer.from(uuidValue);
+        const base64 = encodeURI(uuidBytes.toString('base64'));
+        return base64.slice(0, 22);
     }
 
     async _makeRequest(method, url, headers = {}, extra = {}) {
-    // Function that makes the request
-        return await axios({
+        console.log(`Making ${method} request to: ${url}`);
+        console.log("Headers: \n", headers);
+        console.log("Extra: \n", extra);
+
+        const response = await this.instance.request({
             method: method,
             url: url,
             headers: headers,
             ...extra,
         });
+
+        console.log("Response: ", response.data);
+
+        return response
     }
 
     async _fetch(method, endpoint, headers = {}, data = {}) {
         // Function that prepares the data before making the request
         const url = this._getURLEndpoint(endpoint);
-        console.debug(`Fetching ${url}...`);
 
         headers = this._generateHeaders(headers);
-        console.debug("Headers: ", headers);
 
         if (this.mockResponse) {
             return {"message": "Mock Response", "body": data.json};
         }
-
-        try {   
+        try {
             const response = await this._makeRequest(method, url, headers, data);
 
             if (response.status !== 200) {
-                throw new ThinQAPIError(`Error: ${response.statusText}`);
+                throw new ThinQAPIError(response.error.code, response.error.message, response.headers);
             }
-
             return response.data;
-
         } catch (error) {
-            console.error(`Error: ${error}`);
+            console.error(error);
+            console.error(`${error.name} (${error.code}): ${error.message} - ${error.error_name}`);
             return null;
         }
-
     }
 
     async getDeviceList(timeout=15) {
-        console.debug("Getting device list...");
         return await this._fetch(methods.GET, 'devices', {}, {timeout: timeout * 1000});
     }
 
@@ -120,27 +132,25 @@ export class ThinQAPI {
     }
 
     async getDeviceStatus(deviceId, timeout=15) {
-        return await this._fetch(methods.GET, `devices/${deviceId}/status`, {}, {timeout: timeout * 1000});
+        return await this._fetch(methods.GET, `devices/${deviceId}/state`, {}, {timeout: timeout * 1000});
     }
 
     async postDeviceControl(deviceId, payload, timeout=15) {
         const headers = {"x-conditional-control": "true"};
 
-        return await this._fetch(methods.POST, `devices/${deviceId}/control`, headers, {json: payload, timeout: timeout * 1000});
+        return await this._fetch(methods.POST, `devices/${deviceId}/control`, headers, {data: payload, timeout: timeout * 1000});
     }
 
     async postClientRegister(payload, timeout=15) {
-        console.debug("Registering client...");
-        console.debug({json: payload, timeout: timeout * 1000});
-        return await this._fetch(methods.POST, 'client', {}, {json: payload, timeout: timeout * 1000});
+        return await this._fetch(methods.POST, 'client', {}, {data: payload, timeout: timeout * 1000});
     }
 
     async deleteClientRegister(payload, timeout=15) {
-        return await this._fetch(methods.DELETE, 'client', {}, {json: payload, timeout: timeout * 1000});
+        return await this._fetch(methods.DELETE, 'client', {}, {data: payload, timeout: timeout * 1000});
     }
 
     async postClientCertificate(payload, timeout=15) {
-        return await this._fetch(methods.POST, 'client/certificate', {}, {json: payload, timeout: timeout * 1000});
+        return await this._fetch(methods.POST, 'client/certificate', {}, {data: payload, timeout: timeout * 1000});
     }
 
     async getPushList(timeout=15) {
@@ -163,9 +173,10 @@ export class ThinQAPI {
         return await this._fetch(
         methods.POST, 
         `event/${deviceId}/subscribe`, 
-        data={
+        {},
+        {
             timeout: timeout, 
-            json: {
+            data: {
             expire: {
                 unit: "HOUR",
                 timer: 4464
@@ -176,22 +187,22 @@ export class ThinQAPI {
     }
 
     async deleteEventSubscribe(deviceId, timeout=15) {
-        return await this._fetch(methods.DELETE, `event/${deviceId}/unsubscribe`, data={timeout: timeout});
+        return await this._fetch(methods.DELETE, `event/${deviceId}/unsubscribe`, {}, data={timeout: timeout});
     }
 
     async getPushDeviceList(timeout=15) {
-        return await this._fetch(methods.GET, 'push/devices', data={timeout: timeout});
+        return await this._fetch(methods.GET, 'push/devices', {}, {timeout: timeout * 1000});
     }
 
     async postPushDevicesSubscribe(timeout=15) {
-        return await this._fetch(methods.POST, `push/devices`, data={timeout: timeout});
+        return await this._fetch(methods.POST, `push/devices`, {}, {timeout: timeout * 1000});
     }
 
     async deletePushDevicesSubscribe(timeout=15) {
-        return await this._fetch(methods.DELETE, `push/devices`, data={timeout: timeout});
+        return await this._fetch(methods.DELETE, `push/devices`, {}, {timeout: timeout * 1000});
     }
 
     async getRoute(timeout=15) {
-        return await this._fetch(methods.GET, 'route', data={timeout: timeout});
+        return await this._fetch(methods.GET, 'route', {}, {timeout: timeout * 1000});
     }
 }
